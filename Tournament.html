@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Team Tournament Generator</title>
+
+<style>
+body {
+  font-family: system-ui, sans-serif;
+  background: #f2f4f7;
+  margin: 0;
+  padding: 16px;
+}
+.container {
+  max-width: 900px;
+  margin: auto;
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+}
+h1, h2 {
+  text-align: center;
+}
+textarea, button {
+  width: 100%;
+  padding: 12px;
+  font-size: 16px;
+  margin-top: 10px;
+}
+button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+}
+button:hover {
+  background: #1d4ed8;
+}
+.round {
+  margin-top: 25px;
+}
+.match {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  background: #eef2ff;
+  padding: 12px;
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+.team {
+  padding: 10px;
+  border-radius: 6px;
+  background: white;
+  cursor: pointer;
+  border: 2px solid transparent;
+}
+.team:hover {
+  border-color: #2563eb;
+}
+.team.winner {
+  background: #bbf7d0;
+  border-color: #16a34a;
+}
+.error {
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+@media (min-width: 600px) {
+  .match {
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  .team {
+    width: 48%;
+    text-align: center;
+  }
+}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<h1>Team Tournament Generator</h1>
+
+<textarea id="members" rows="4"
+placeholder="Enter member names separated by commas
+Example:
+Lokesh, Arun, Karthik, Ravi, Suresh, Mani, Bala, Vicky"></textarea>
+
+<button onclick="startTournament()">Generate Tournament</button>
+<p class="error" id="error"></p>
+
+<div id="tournament"></div>
+
+</div>
+
+<script>
+let tournamentData = null;
+
+const roundNames = ["Final", "Semifinal", "Quarterfinal"];
+
+function shuffle(arr) {
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+}
+
+function startTournament() {
+  const input = document.getElementById("members").value;
+  const error = document.getElementById("error");
+  error.textContent = "";
+
+  let names = input.split(",").map(n => n.trim()).filter(Boolean);
+
+  if (names.length < 2 || names.length % 2 !== 0) {
+    error.textContent = "Please enter an even number of member names.";
+    return;
+  }
+
+  shuffle(names);
+
+  let teams = [];
+  for (let i = 0; i < names.length; i += 2) {
+    teams.push(`${names[i]} & ${names[i+1]}`);
+  }
+
+  tournamentData = { rounds: [teams] };
+  save();
+  render();
+}
+
+function render() {
+  const container = document.getElementById("tournament");
+  container.innerHTML = "";
+
+  tournamentData.rounds.forEach((round, rIndex) => {
+    const roundDiv = document.createElement("div");
+    roundDiv.className = "round";
+
+    const title = document.createElement("h2");
+    title.textContent = roundNames[Math.log2(round.length)] || `Round ${rIndex+1}`;
+    roundDiv.appendChild(title);
+
+    for (let i = 0; i < round.length; i += 2) {
+      const matchDiv = document.createElement("div");
+      matchDiv.className = "match";
+
+      [round[i], round[i+1]].forEach((team, tIndex) => {
+        const teamDiv = document.createElement("div");
+        teamDiv.className = "team";
+        teamDiv.textContent = team;
+
+        teamDiv.onclick = () => selectWinner(rIndex, i, team);
+        matchDiv.appendChild(teamDiv);
+      });
+
+      roundDiv.appendChild(matchDiv);
+    }
+    container.appendChild(roundDiv);
+  });
+}
+
+function selectWinner(roundIndex, matchIndex, team) {
+  if (!tournamentData.rounds[roundIndex + 1]) {
+    tournamentData.rounds[roundIndex + 1] = [];
+  }
+
+  const nextRound = tournamentData.rounds[roundIndex + 1];
+  const pos = Math.floor(matchIndex / 2);
+
+  nextRound[pos] = team;
+  save();
+  render();
+}
+
+function save() {
+  localStorage.setItem("tournamentData", JSON.stringify(tournamentData));
+}
+
+function load() {
+  const saved = localStorage.getItem("tournamentData");
+  if (saved) {
+    tournamentData = JSON.parse(saved);
+    render();
+  }
+}
+
+load();
+</script>
+
+</body>
+</html>
